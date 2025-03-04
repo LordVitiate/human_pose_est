@@ -4,7 +4,7 @@ FROM ubuntu:20.04
 # Set environment variables to avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install necessary packages
+# Install required packages
 RUN apt-get update && \
     apt-get install -y \
     build-essential \
@@ -27,20 +27,28 @@ RUN wget https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64.sh &
 # Initialize conda
 RUN /root/anaconda3/bin/conda init bash
 
-# Create a conda environment for MediaPipe
-RUN /root/anaconda3/bin/conda create --name mediapipe python=3.11 -y
-
-# Activate the conda environment and install required Python packages
-RUN /bin/bash -c "source /root/anaconda3/bin/activate mediapipe && \
-    pip install --upgrade pip && \
-    pip install mediapipe opencv-python"
+# Create conda environment and install packages
+RUN /root/anaconda3/bin/conda create --name mediapipe python=3.11 -y && \
+    /root/anaconda3/bin/conda run -n mediapipe pip install --upgrade pip && \
+    /root/anaconda3/bin/conda run -n mediapipe pip install mediapipe opencv-python
 
 # Create and set the working directory
-RUN mkdir -p /app
+RUN mkdir -p /app/mount
 WORKDIR /app
 
 # Copy the test script into the container
 COPY test_mediapipe.py .
 
-# Set the entrypoint to bash
-ENTRYPOINT ["/bin/bash"]
+# Define an entrypoint script to activate the environment and run the script
+RUN echo '#!/bin/bash\n\
+source /root/anaconda3/etc/profile.d/conda.sh && \
+conda activate mediapipe && echo "conda activate mediapipe" >> ~/.bashrc && \
+python3 -c "import mediapipe as mp; import cv2; print(\"MediaPipe version:\", mp.__version__); print(\"OpenCV version:\", cv2.__version__);" && \
+exec "$@"' > /entrypoint.sh && \
+chmod +x /entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Default command if no arguments are passed
+CMD ["/bin/bash"]
