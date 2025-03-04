@@ -304,8 +304,9 @@ class PoseAnalysis:
             'shins': shin_segments if shin_segments else None
         }
 # Define the video stream URL
-video_stream_url = 'rtsp://admin:!Qwerty1234@192.168.1.233:554/Streaming/Channels/101'
-# video_stream_url = '3.mp4'
+# video_stream_url = 'rtsp://admin:!Qwerty1234@192.168.1.233:554/Streaming/Channels/101' # above the table
+# video_stream_url = 'rtsp://admin:!Qwerty1234@192.168.1.202:554/Streaming/Channels/101'
+video_stream_url = '3.mp4'
 
 # Load the pre-trained YOLOv8 pose estimation model
 pose_model = YOLO('yolov8n-pose.pt')  # Pose estimation model
@@ -494,12 +495,18 @@ while True:
                     start = tuple(map(int, start))
                     color = (255, 0, 255) if leg_name == 'LL' else (255, 255, 0)  # Magenta for LL, Cyan for LR
                     cv2.line(frame_out, start, end, color, 2)
-
+                    elbow_type_colors = {
+                        "pressed": (0, 0, 255),   # Red for fully pressed
+                        "semi-pressed": (0, 255, 255), # Yellow for partially open
+                        "semi-open": (255, 165, 0), # Orange for semi-pressed
+                        "open": (0, 255, 0)       # Green for fully open
+                    }
                     # Display angle between LL/LR and y-axis
                     angle_key = f"{leg_name}_to_y"
                     if angle_key in angles:
-                        angle_text = f"{angle_key}: {angles[angle_key]:.1f}°"
-                        # cv2.putText(frame_out, angle_text, (start[0], start[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        # angle_text = f"{angle_key}: {angles[angle_key]:.1f}°"
+                        angle_text = get_elbow_type(angles[angle_key])  # Get the angle type as a string
+                        cv2.putText(frame_out, angle_text, (start[0], start[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, elbow_type_colors.get(angle_text, (255, 255, 255)), 1)
 
         # Draw shin segments (SL and SR) if available
         if segments['shins'] is not None:
@@ -534,7 +541,7 @@ while True:
     cv2.imshow('Human Pose Estimation', frame_out)
 
     # Exit the loop if 'q' is pressed
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(51) & 0xFF == ord('q'):
         break
 
 # Release resources
