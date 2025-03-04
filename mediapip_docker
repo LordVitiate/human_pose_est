@@ -1,0 +1,46 @@
+# Use the official Ubuntu 20.04 image as the base
+FROM ubuntu:20.04
+
+# Set environment variables to avoid prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install necessary packages
+RUN apt-get update && \
+    apt-get install -y \
+    build-essential \
+    git \
+    wget \
+    libglu1-mesa-dev \
+    freeglut3-dev \
+    mesa-common-dev \
+    libglib2.0-0 \
+    libglib2.0-dev \
+    nano && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Anaconda
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64.sh && \
+    bash Anaconda3-2024.10-1-Linux-x86_64.sh -b -p /root/anaconda3 && \
+    rm Anaconda3-2024.10-1-Linux-x86_64.sh
+
+# Initialize conda
+RUN /root/anaconda3/bin/conda init bash
+
+# Create a conda environment for MediaPipe
+RUN /root/anaconda3/bin/conda create --name mediapipe python=3.11 -y
+
+# Activate the conda environment and install required Python packages
+RUN /bin/bash -c "source /root/anaconda3/bin/activate mediapipe && \
+    pip install --upgrade pip && \
+    pip install mediapipe opencv-python"
+
+# Create and set the working directory
+RUN mkdir -p /app
+WORKDIR /app
+
+# Copy the test script into the container
+COPY test_mediapipe.py .
+
+# Set the entrypoint to bash
+ENTRYPOINT ["/bin/bash"]
